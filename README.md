@@ -1,10 +1,12 @@
 # dsh-toy
 
-[![CI](https://github.com/c3ll256/dsh-toy/actions/workflows/ci.yml/badge.svg)](https://github.com/c3ll256/dsh-toy/actions/workflows/ci.yml)
+[![CI](https://github.com/Arbousier1/dsh-toy/actions/workflows/ci.yml/badge.svg)](https://github.com/Arbousier1/dsh-toy/actions/workflows/ci.yml)
 
 English | [简体中文](README.zh-CN.md)
 
 `dsh-toy` is a DeepSeek Harness plugin for connecting small toys to DSH.
+
+This fork of [c3ll256/dsh-toy](https://github.com/c3ll256/dsh-toy) contains the DSH RC adaptation and companion-plugin safety service. The original license and notices are retained.
 
 At connection time, the agent first asks for the brand and model, then selects the connection method automatically. If the user genuinely does not know, the agent starts unknown-hardware discovery:
 
@@ -33,26 +35,30 @@ Use only hardware you own or are explicitly authorized to control. Treat sharing
 
 ## Install
 
+Version 0.2.2 adds the host-only Cordis `toySafety` service for companion plugins such as `dsh-tavern-toy-bridge`: detached device snapshots, emergency stop, and read-only deployment limits. It exposes neither actuation nor credentials. Model control continues through the ordinary tool runtime and its guards. Install the paired 0.2.2 tarball when using the bridge; the prior 0.2.1 package does not provide this service.
+
+Tested with [DSH `0.1.2-rc.1`](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1). The plugin requires `@deepseek-ai/dsh-tools` `^0.1.2-rc.1`; older DSH RC versions are outside this release's supported range.
+
 Requirements: Node.js 22.19 or newer and pnpm on `PATH`. Raw macOS BLE discovery additionally uses the Swift compiler from Xcode Command Line Tools. Install pnpm once if needed with `npm install --global pnpm@10`, then add the plugin directly from GitHub:
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add github:c3ll256/dsh-toy
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add github:Arbousier1/dsh-toy
 ```
 
 Start DSH with the same profile:
 
 ```sh
-npx -y @deepseek-ai/dsh web
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 
 The first command installs and activates the bundle persistently in the `web` profile. Re-running DSH does not reinstall it. To inspect the composed configuration or remove the bundle:
 
 ```sh
-npx -y @deepseek-ai/dsh --profile web --dump-config
-npx -y @deepseek-ai/dsh plugin --profile web remove dsh-toy
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 --profile web --dump-config
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web remove dsh-toy
 ```
 
-Replace `web` with another profile name when needed.
+Replace `web` with another profile name when needed, and start it with `--profile <name>`. `web` remains the profile used by `dsh web` in this RC. Existing installations can rerun the `add` command to update the plugin.
 
 ## Quick start
 
@@ -141,6 +147,8 @@ Sharing tokens are commonly single-use and expire after disconnection. Generate 
 
 Known model: `toy_connect` → `toy_scan` → `toy_list` → `toy_control` → `toy_stop` → `toy_disconnect`.
 
+In Native mode these are direct tools. In PTC mode the model calls them inside `run_code`, for example `const devices = await tools.toy_list({})`. PTC calls return structured values directly; Native calls render the same values as JSON text.
+
 Unknown model on macOS: `toy_scan_raw_ble` → use an advertised name as evidence → `toy_connect` → `toy_scan`. If raw discovery is unavailable or inconclusive, continue with `toy_connect(model: "unknown")`.
 
 ## Troubleshooting
@@ -165,6 +173,15 @@ Unknown model on macOS: `toy_scan_raw_ble` → use an advertised name as evidenc
 ```sh
 pnpm install
 pnpm run check
+```
+
+The integration tests load the published DSH tool registry and PTC worker runtime, covering registration, canonical results, argument and safety checks, cancellation, and plugin unload/reload. Backends use fixtures; the tests do not control physical devices.
+
+To install a locally built checkout into DSH:
+
+```sh
+pnpm pack
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add ./dsh-toy-0.2.2.tgz
 ```
 
 ## Acknowledgements

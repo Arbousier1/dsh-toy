@@ -339,6 +339,23 @@ declare class ToyRuntime {
 }
 //#endregion
 //#region src/index.d.ts
+/** Host-only safety seam for companion plugins. It deliberately cannot actuate devices. */
+interface ToySafety {
+  /** Read a detached snapshot of discovered devices without connecting or scanning. */
+  devices(signal: AbortSignal): Promise<ToyDevice[]>;
+  /** Stop all devices, including during agent cancellation or PTC teardown. */
+  stop(signal: AbortSignal): Promise<void>;
+  /** Deployment caps, never transport credentials or endpoints. */
+  readonly limits: Readonly<{
+    maxIntensityPercent: number;
+    maxDurationSeconds: number;
+  }>;
+}
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    toySafety: ToySafety;
+  }
+}
 /** Cordis plugin name. */
 declare const name = "dsh-toy";
 /** Harness services required by the model-facing consumer. */
@@ -391,4 +408,4 @@ declare function resolveConfig(config: Config): ResolvedConfig;
 /** Register the connection, discovery, control, stop, and disconnect tools. */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { AutoToyBackend, type AutoToyBackendConfig, ButtplugBackend, type ButtplugConfig, Config, type IntifaceArtifact, type IntifaceProcessConfig, IntifaceProcessManager, MACOS_RAW_BLE_SCANNER_SOURCE, ManagedButtplugBackend, MonsterPartyBackend, type MonsterPartyConfig, type RawBleAdvertisement, type RuntimeControlRequest, type RuntimeControlResult, type ToyBackend, type ToyConnection, type ToyDevice, ToyError, type ToyFeature, type ToyFeatureKind, type ToyLevelCommand, type ToyProvider, ToyRuntime, type ToySafetyConfig, type ToyTarget, apply, createIntifaceUserDeviceConfig, extractIntifaceExecutable, inject, installIntifaceEngine, intifaceArguments, name, parseButtplugDeviceList, parseRawBleScan, resolveConfig, routeToyTarget, scanMacOSRawBle, selectIntifaceArtifact };
+export { AutoToyBackend, type AutoToyBackendConfig, ButtplugBackend, type ButtplugConfig, Config, type IntifaceArtifact, type IntifaceProcessConfig, IntifaceProcessManager, MACOS_RAW_BLE_SCANNER_SOURCE, ManagedButtplugBackend, MonsterPartyBackend, type MonsterPartyConfig, type RawBleAdvertisement, type RuntimeControlRequest, type RuntimeControlResult, type ToyBackend, type ToyConnection, type ToyDevice, ToyError, type ToyFeature, type ToyFeatureKind, type ToyLevelCommand, type ToyProvider, ToyRuntime, ToySafety, type ToySafetyConfig, type ToyTarget, apply, createIntifaceUserDeviceConfig, extractIntifaceExecutable, inject, installIntifaceEngine, intifaceArguments, name, parseButtplugDeviceList, parseRawBleScan, resolveConfig, routeToyTarget, scanMacOSRawBle, selectIntifaceArtifact };

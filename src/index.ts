@@ -13,6 +13,22 @@ import { scanMacOSRawBle } from './macos-ble.ts'
 import { ToyRuntime } from './runtime.ts'
 import type { ToyBackend, ToyDevice, ToyFeatureKind } from './types.ts'
 
+/** Host-only safety seam for companion plugins. It deliberately cannot actuate devices. */
+export interface ToySafety {
+  /** Read a detached snapshot of discovered devices without connecting or scanning. */
+  devices(signal: AbortSignal): Promise<ToyDevice[]>
+  /** Stop all devices, including during agent cancellation or PTC teardown. */
+  stop(signal: AbortSignal): Promise<void>
+  /** Deployment caps, never transport credentials or endpoints. */
+  readonly limits: Readonly<{ maxIntensityPercent: number; maxDurationSeconds: number }>
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    toySafety: ToySafety
+  }
+}
+
 export { ButtplugBackend, parseButtplugDeviceList } from './buttplug.ts'
 export type { ButtplugConfig } from './buttplug.ts'
 export { AutoToyBackend, intifaceArguments, IntifaceProcessManager, ManagedButtplugBackend, routeToyTarget } from './auto.ts'
@@ -236,6 +252,15 @@ export function apply(ctx: Context, config: Config): void {
   }, error => { ctx.logger.warn(`dsh-toy automatic stop failed: ${String(error)}`) })
 
   ctx.effect(() => () => runtime.close(), 'dsh-toy transport teardown')
+
+  ctx.provide('toySafety', Object.freeze({
+    devices: async (signal: AbortSignal) => structuredClone(await runtime.list(signal)),
+    stop: (signal: AbortSignal) => runtime.stop(undefined, signal),
+    limits: Object.freeze({
+      maxIntensityPercent: resolved.maxIntensityPercent,
+      maxDurationSeconds: resolved.maxDurationSeconds,
+    }),
+  } satisfies ToySafety))
 
   ctx.tools.register(defineTool({
     name: 'toy_scan_raw_ble',

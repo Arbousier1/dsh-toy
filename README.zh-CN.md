@@ -1,10 +1,12 @@
 # dsh-toy
 
-[![CI](https://github.com/c3ll256/dsh-toy/actions/workflows/ci.yml/badge.svg)](https://github.com/c3ll256/dsh-toy/actions/workflows/ci.yml)
+[![CI](https://github.com/Arbousier1/dsh-toy/actions/workflows/ci.yml/badge.svg)](https://github.com/Arbousier1/dsh-toy/actions/workflows/ci.yml)
 
 [English](README.md) | 简体中文
 
 `dsh-toy` 是一个 DeepSeek Harness 插件，用于将小玩具接入 DSH。
+
+此仓库 fork 自 [c3ll256/dsh-toy](https://github.com/c3ll256/dsh-toy)，包含 DSH RC 适配与配套插件所需的安全服务，保留原项目许可证及声明。
 
 连接时，agent 会先询问玩具的品牌和型号，再自动选择连接方式。如果用户确实不知道，agent 会进入未知硬件发现：
 
@@ -33,26 +35,30 @@
 
 ## 安装
 
+`0.2.2` 新增 Cordis `toySafety` 服务，供 `dsh-tavern-toy-bridge` 等宿主插件读取设备快照和执行紧急停止。服务仅包含 `devices(signal)`、`stop(signal)` 和只读 `limits`，不提供控制能力、不暴露凭据。模型控制仍走标准工具调用与保护链。桥接版请安装配套的 `dsh-toy-0.2.2.tgz`；旧 `0.2.1` 包没有此接口。其他原有使用方式不变。
+
+已针对 [DSH `0.1.2-rc.1`](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-rc.1) 验证。插件要求 `@deepseek-ai/dsh-tools` `^0.1.2-rc.1`；更早的 DSH RC 不在本次发布的支持范围内。
+
 运行要求：Node.js 22.19 或更高版本，并确保 `pnpm` 在 `PATH` 中。macOS 原始 BLE 发现还需要 Xcode Command Line Tools 提供的 Swift 编译器。如尚未安装 pnpm，先运行一次 `npm install --global pnpm@10`，然后直接从 GitHub 安装插件：
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add github:c3ll256/dsh-toy
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add github:Arbousier1/dsh-toy
 ```
 
 使用同一个 profile 启动 DSH：
 
 ```sh
-npx -y @deepseek-ai/dsh web
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 
 第一条命令会把 bundle 持久安装并启用到 `web` profile，之后启动 DSH 时无需重复安装。查看组合配置或移除 bundle：
 
 ```sh
-npx -y @deepseek-ai/dsh --profile web --dump-config
-npx -y @deepseek-ai/dsh plugin --profile web remove dsh-toy
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 --profile web --dump-config
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web remove dsh-toy
 ```
 
-需要其他 profile 时，将 `web` 替换为对应名称。
+需要其他 profile 时，将 `web` 替换为对应名称，并使用 `--profile <名称>` 启动。本 RC 中的 `dsh web` 仍使用 `web` profile。已有安装可重新运行 `add` 命令更新插件。
 
 ## 快速使用
 
@@ -141,6 +147,8 @@ MONSTERPARTY_TOKEN=<TOKEN>
 
 已知型号：`toy_connect` → `toy_scan` → `toy_list` → `toy_control` → `toy_stop` → `toy_disconnect`。
 
+Native 模式下直接调用这些工具；PTC 模式下由模型在 `run_code` 内调用，例如 `const devices = await tools.toy_list({})`。PTC 调用直接返回结构化值，Native 调用将相同的值渲染为 JSON 文本。
+
 macOS 未知型号：`toy_scan_raw_ble` → 使用广播名称作为硬件证据 → `toy_connect` → `toy_scan`。原始发现不可用或没有结论时，继续调用 `toy_connect(model: "unknown")`。
 
 ## 故障排查
@@ -165,6 +173,15 @@ macOS 未知型号：`toy_scan_raw_ble` → 使用广播名称作为硬件证据
 ```sh
 pnpm install
 pnpm run check
+```
+
+集成测试加载已发布的 DSH 工具注册表与 PTC worker runtime，覆盖注册、规范返回值、参数与安全限制、取消，以及插件卸载和重新加载。连接后端使用 fixture，测试不会控制物理设备。
+
+将本地构建的代码安装到 DSH：
+
+```sh
+pnpm pack
+npx -y @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add ./dsh-toy-0.2.2.tgz
 ```
 
 ## 致谢
